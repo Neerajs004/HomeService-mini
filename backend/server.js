@@ -29,10 +29,12 @@ const saltRounds = 10;
 
 // **Database Connection**
 const db = mysql.createConnection({
-  host: "127.0.0.1",
-  user: "root",
-  password: "$Blood6Beast$",
+  host: "project69group-project69group.f.aivencloud.com",
+  user: "avnadmin",
+  password: "AVNS_VemAnzjcymEQDqCJU54",
   database: "homeservice",
+  port: 21819,
+  connectTimeout: 20000, // Set timeout to 20 seconds
 });
 
 db.connect((err) => {
@@ -102,7 +104,6 @@ app.post("/login", (req, res) => {
      // Check Workers table
      db.query(sqlWorker, [username], async (err, workerResults) => {
        if (err) return res.status(500).json({ error: "Database error" });
- 
        if (workerResults.length > 0) {
          const match = await bcrypt.compare(password, workerResults[0].password);
          if (match) {
@@ -129,7 +130,7 @@ app.post("/login", (req, res) => {
                message: "User login successful",
                role: "user",
                user: { id: userResults[0].id, username: userResults[0].username },
-               redirect: "app1.jsx"
+               redirect: "user"
              });
            }
          }
