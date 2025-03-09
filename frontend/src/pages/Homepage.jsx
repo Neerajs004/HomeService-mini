@@ -167,6 +167,7 @@ const HomePage = () => {
   };
 
   const handleUserLogin = async (username, password) => {
+    console.log("Attempting login with:", username, password);
     try {
       const response = await fetch("http://localhost:5000/login", {
         method: "POST",
