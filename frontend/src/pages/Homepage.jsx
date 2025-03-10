@@ -166,27 +166,40 @@ const HomePage = () => {
     }
   };
 
-  const handleUserLogin = async (username, password) => {
-    console.log("Attempting login with:", username, password);
+  const handleUserLogin = async (identifier, password, isWorker = false) => {
+    console.log("Attempting login with:", identifier, password, "isWorker:", isWorker);
+  
     try {
+      const requestBody = isWorker
+        ? { workerId: Number(identifier), password } // ✅ Send worker ID
+        : { username: identifier, password }; // ✅ Send username for users/admins
+  
+      console.log("Sending requestBody:", requestBody); // Debugging log
+  
       const response = await fetch("http://localhost:5000/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify(requestBody),
       });
-
+  
       const data = await response.json();
+      console.log("Server Response:", data); // Debugging log
+  
       if (data.redirect === "admin") {
         navigate(`/admin/${data.user.id}`);
-      } else if (data.redirect === "/worker") {
+      } else if (data.redirect === "worker") {
         navigate(`/worker/${data.user.id}`);
-      } else {
+      } else if (data.redirect === "user") {
         navigate(`/user/${data.user.id}`);
+      } else {
+        alert("Invalid credentials");
       }
     } catch (error) {
       console.error("Login error:", error);
+      alert("An error occurred. Please try again.");
     }
   };
+  
 
   const handleUserSignup = async (username, location, email, phone, password) => {
     try {
@@ -910,12 +923,18 @@ const HomePage = () => {
               placeholder="Password"
               className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
             />
-            <Button className="w-full transition-transform duration-200 hover:scale-105"
-            onClick={() => {
-              const username = document.getElementById("login-username").value;
-              const password = document.getElementById("login-password").value;
-              handleUserLogin(username, password);
-            }}>
+                 <Button 
+              onClick={() => {
+                const identifier = document.getElementById("login-username").value;
+                const password = document.getElementById("login-password").value;
+                const isWorker = loginType === "worker"; // ✅ Detect if worker login
+
+                // ✅ Convert input to number if worker is logging in
+                const finalIdentifier = isWorker ? Number(identifier) : identifier;
+
+                handleUserLogin(finalIdentifier, password, isWorker);
+              }}
+            >
               Login
             </Button>
             <Button className="w-full transition-transform duration-200 hover:scale-105" onClick={()=>{setShowSignupModal(true); onClose();}

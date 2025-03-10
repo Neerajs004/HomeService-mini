@@ -80,7 +80,7 @@ app.post("/login", (req, res) => {
   const { username, password } = req.body;
    // SQL queries to check all three tables
    const sqlAdmin = "SELECT * FROM admin WHERE username = ?";
-   const sqlWorker = "SELECT * FROM workers WHERE name = ?"; // Assuming workers use "name" instead of "username"
+   const sqlWorker = "SELECT * FROM workers WHERE id = ?"; // Assuming workers use "name" instead of "username"
    const sqlUser = "SELECT * FROM user WHERE username = ?";
  
    // Check Admins table first
@@ -102,20 +102,22 @@ app.post("/login", (req, res) => {
      }
  
      // Check Workers table
-     db.query(sqlWorker, [username], async (err, workerResults) => {
-       if (err) return res.status(500).json({ error: "Database error" });
-       if (workerResults.length > 0) {
-         const match = await bcrypt.compare(password, workerResults[0].password);
-         if (match) {
-           return res.json({
-             success: true,
-             message: "Worker login successful",
-             role: "worker",
-             user: { id: workerResults[0].id, username: workerResults[0].name },
-             redirect: "worker.jsx"
-           });
-         }
-       }
+      // **Check Workers table before Users table**
+    db.query(sqlWorker, [username], async (err, workerResults) => {
+      if (err) return res.status(500).json({ error: "Database error" });
+
+      if (workerResults.length > 0) {
+        const match = await bcrypt.compare(password, workerResults[0].password);
+        if (match) {
+          return res.json({
+            success: true,
+            message: "Worker login successful",
+            role: "worker",
+            user: { id: workerResults[0].id, name: workerResults[0].name },
+            redirect: "worker"
+          });
+        }
+      }
  
        // Check Users table
        db.query(sqlUser, [username], async (err, userResults) => {
@@ -280,6 +282,19 @@ app.get("/workerDetails", async (req, res) => {
   });
 });
 
+
+app.get("/worker/:workerId", (req, res) => {
+  const workerId = req.params.workerId;
+  const query = "SELECT * FROM workers WHERE id = ?";
+  
+  db.query(query, [workerId], (err, result) => {
+    if (err) {
+      res.status(500).json({ error: "Database error" });
+    } else {
+      res.json(result[0]);
+    }
+  });
+});
 
 // **Start the Server**
 const PORT = 5000;
