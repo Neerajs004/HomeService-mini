@@ -557,12 +557,19 @@ padding: var(--space-sm) var(--space-md);
 margin-top: var(--space-md);
 z-index: var(--z-elevated);
 cursor: pointer;
+background-color: rgb(8, 232, 38);
+    color: white;
+    border-radius: inherit;
 pointer-events: auto;
 }
 
 .close-btn {
 margin-top: var(--space-md);
 width: 100%;
+background-color: red;
+    color: white;
+    border-radius: inherit;
+    height: 35px;
 }
 
 .back-btn {
