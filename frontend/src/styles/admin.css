@@ -247,11 +247,13 @@ body {
 }
 
 /* Main Content Styles */
-.main-content {
+.main-content-admin {
+  margin-left: 13px;
   flex: 1;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  background-color: white;
 }
 
 .content-wrapper {

@@ -613,7 +613,7 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main content area */}
-      <main className="main-content">
+      <main className="main-content-admin">
         <div className="content-wrapper">
           {renderContent()}
         </div>
