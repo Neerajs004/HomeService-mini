@@ -28,91 +28,91 @@ export default function WorkerDashboard() {
   }
 
   return (
-    <div className="page-container">
-      <nav className="top-navbar">
-        <div className="nav-left">
-          <Home className="nav-icon" />
-          <span className="brand-name">ServicePro</span>
+    <div className="page-containerworker">
+      <nav className="top-navbarworker">
+        <div className="nav-leftworker">
+          <Home className="nav-iconworker" />
+          <span className="brand-nameworker">ServicePro</span>
         </div>
-        <div className="nav-middle">
-          <button className="nav-btn"><Home className="icon-sm" /> Home</button>
-          <button className="nav-btn"><Briefcase className="icon-sm" /> Jobs</button>
-          <button className="nav-btn"><Mail className="icon-sm" /> Messages</button>
+        <div className="nav-middleworker">
+          <button className="nav-btnworker"><Home className="icon-smworker" /> Home</button>
+          <button className="nav-btnworker"><Briefcase className="icon-smworker" /> Jobs</button>
+          <button className="nav-btnworker"><Mail className="icon-smworker" /> Messages</button>
         </div>
-        <div className="nav-right">
-          <button className="notification-btn">
-            <Bell className="icon-sm" />
-            <span className="notification-badge">3</span>
+        <div className="nav-rightworker">
+          <button className="notification-btnworker">
+            <Bell className="icon-smworker" />
+            <span className="notification-badgeworker">3</span>
           </button>
-          <div className="nav-avatar">
+          <div className="nav-avatarworker">
             <img src="/placeholder.svg?height=32&width=32" alt="Worker" />
           </div>
         </div>
       </nav>
 
-      <div className="dashboard-container">
-        <aside className="sidebar">
-          <div className="profile-section">
-            <div className="profile-image-container">
-              <img src={worker.image || "/placeholder.svg"} alt="Worker" className="worker-avatar" />
-              <span className="status-badge">{worker.status || "Unavailable"}</span>
+      <div className="dashboard-container1worker">
+        <aside className="sidebarworker">
+          <div className="profile-sectionworker">
+            <div className="profile-image-containerworker">
+              <img src={worker.image || "/placeholder.svg"} alt="Worker" className="worker-avatarworker" />
+              <span className="status-badgeworker">{worker.status || "Unavailable"}</span>
             </div>
 
-            <div className="worker-info">
+            <div className="worker-infoworker">
               <h2>{worker.name}</h2>
-              <p className="worker-title">{worker.profession}</p>
+              <p className="worker-titleworker">{worker.profession}</p>
 
-              <div className="info-grid">
-                <div className="info-item">
-                  <Phone className="info-icon" />
+              <div className="info-gridworker">
+                <div className="info-itemworker">
+                  <Phone className="info-iconworker" />
                   <span>{worker.phone}</span>
                 </div>
-                <div className="info-item">
-                  <Mail className="info-icon" />
+                <div className="info-itemworker">
+                  <Mail className="info-iconworker" />
                   <span>{worker.email}</span>
                 </div>
-                <div className="info-item">
-                  <MapPin className="info-icon" />
+                <div className="info-itemworker">
+                  <MapPin className="info-iconworker" />
                   <span>{worker.address}</span>
                 </div>
-                <div className="info-item">
-                  <Calendar className="info-icon" />
+                <div className="info-itemworker">
+                  <Calendar className="info-iconworker" />
                   <span>Joined: {worker.joined_date}</span>
                 </div>
               </div>
 
-              <div className="skill-tags">
+              <div className="skill-tagsworker">
                 {worker.skills?.map((skill, index) => (
-                  <span key={index} className="skill-tag">{skill}</span>
+                  <span key={index} className="skill-tagworker">{skill}</span>
                 ))}
               </div>
             </div>
           </div>
         </aside>
 
-        <main className="main-content">
-          <section className="stats-section">
-            <div className="stat-card">
+        <main className="main-contentworker">
+          <section className="stats-sectionworker">
+            <div className="stat-cardworker">
               <h3>Rating</h3>
-              <div className="rating">
-                <Star className="star-icon" />
-                <span className="rating-value">{worker.rating || "N/A"}</span>
+              <div className="ratingworker">
+                <Star className="star-iconworker" />
+                <span className="rating-valueworker">{worker.rating || "N/A"}</span>
               </div>
             </div>
-            <div className="stat-card">
+            <div className="stat-cardworker">
               <h3>Completed Jobs</h3>
-              <div className="completed-jobs">
-                <span className="job-count">{worker.completed_jobs || 0}</span>
-                <div className="progress-bar">
-                  <div className="progress" style={{ width: `${worker.job_progress || 0}%` }}></div>
+              <div className="completed-jobsworker">
+                <span className="job-countworker">{worker.completed_jobs || 0}</span>
+                <div className="progress-barworker">
+                  <div className="progressworker" style={{ width: `${worker.job_progress || 0}%` }}></div>
                 </div>
               </div>
             </div>
-            <div className="stat-card">
+            <div className="stat-cardworker">
               <h3>Earnings</h3>
-              <div className="earnings">
-                <DollarSign className="dollar-icon" />
-                <span className="amount">{worker.earnings || "0"}</span>
+              <div className="earningsworker">
+                <DollarSign className="dollar-iconworker" />
+                <span className="amountworker">{worker.earnings || "0"}</span>
               </div>
             </div>
           </section>
