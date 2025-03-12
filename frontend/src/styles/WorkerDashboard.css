@@ -1323,3 +1323,37 @@ body {
     display: none;
   }
 }
+
+.jobs-containerworker {
+  margin-top: 20px;
+}
+
+.jobs-gridworker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.job-cardworker {
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.accept-btnworker {
+  background: green;
+  color: white;
+  padding: 8px;
+  margin-right: 5px;
+  border: none;
+  cursor: pointer;
+}
+
+.cancel-btnworker {
+  background: red;
+  color: white;
+  padding: 8px;
+  border: none;
+  cursor: pointer;
+}

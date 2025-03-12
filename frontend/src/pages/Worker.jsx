@@ -8,6 +8,9 @@ import "../styles/WorkerDashboard.css";
 export default function WorkerDashboard() {
   const { workerId } = useParams(); // Get worker ID from URL
   const [worker, setWorker] = useState(null);
+  const [pendingBookings, setPendingBookings] = useState([]);
+  const [showJobsworker, setShowJobsworker] = useState(false);
+
 
   useEffect(() => {
     const fetchWorkerDetails = async () => {
@@ -23,6 +26,35 @@ export default function WorkerDashboard() {
     fetchWorkerDetails();
   }, [workerId]);
 
+  const fetchPendingBookingsworker = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/worker/${workerId}/pendingBookings`);
+      const data = await response.json();
+      setPendingBookings(data);
+      setShowJobsworker(true);
+    } catch (error) {
+      console.error("Error fetching pending bookings:", error);
+    }
+  };
+  
+
+  
+  const updateBookingStatusworker = async (bookingId, status) => {
+    try {
+      await fetch(`http://localhost:5000/booking/${bookingId}/update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, workerId }), // Include workerId
+      });
+  
+      // Refresh bookings after updating
+      fetchPendingBookingsworker();
+    } catch (error) {
+      console.error("Error updating booking:", error);
+    }
+  };
+  
+  
   if (!worker) {
     return <p>Loading worker details...</p>;
   }
@@ -36,7 +68,10 @@ export default function WorkerDashboard() {
         </div>
         <div className="nav-middleworker">
           <button className="nav-btnworker"><Home className="icon-smworker" /> Home</button>
-          <button className="nav-btnworker"><Briefcase className="icon-smworker" /> Jobs</button>
+          <button className="nav-btnworker" onClick={fetchPendingBookingsworker}>
+            <Briefcase className="icon-smworker" /> Jobs
+          </button>
+
           <button className="nav-btnworker"><Mail className="icon-smworker" /> Messages</button>
         </div>
         <div className="nav-rightworker">
@@ -51,40 +86,28 @@ export default function WorkerDashboard() {
       </nav>
 
       <div className="dashboard-container1worker">
-        <aside className="sidebarworker">
+      <aside className="sidebarworker">
           <div className="profile-sectionworker">
-            <div className="profile-image-containerworker">
-              <img src={worker.image || "/placeholder.svg"} alt="Worker" className="worker-avatarworker" />
-              <span className="status-badgeworker">{worker.status || "Unavailable"}</span>
-            </div>
+            <img src={worker.image || "/placeholder.svg"} alt="Worker" className="worker-avatarworker" />
+            <span className="status-badgeworker">{worker.status || "Unavailable"}</span>
 
             <div className="worker-infoworker">
               <h2>{worker.name}</h2>
-              <p className="worker-titleworker">{worker.profession}</p>
 
               <div className="info-gridworker">
-                <div className="info-itemworker">
-                  <Phone className="info-iconworker" />
-                  <span>{worker.phone}</span>
-                </div>
+              <div className="info-itemworker">
+  <Phone className="info-iconworker" />
+  <span>{worker.phone ? worker.phone : "Phone not available"}</span>
+</div>
+
                 <div className="info-itemworker">
                   <Mail className="info-iconworker" />
-                  <span>{worker.email}</span>
+                  <span>{worker.email || "Not available"}</span>
                 </div>
                 <div className="info-itemworker">
                   <MapPin className="info-iconworker" />
-                  <span>{worker.address}</span>
+                  <span>{worker.location || "Fetching location..."}</span>
                 </div>
-                <div className="info-itemworker">
-                  <Calendar className="info-iconworker" />
-                  <span>Joined: {worker.joined_date}</span>
-                </div>
-              </div>
-
-              <div className="skill-tagsworker">
-                {worker.skills?.map((skill, index) => (
-                  <span key={index} className="skill-tagworker">{skill}</span>
-                ))}
               </div>
             </div>
           </div>
@@ -116,8 +139,33 @@ export default function WorkerDashboard() {
               </div>
             </div>
           </section>
+
+          {showJobsworker && (
+  <div className="jobs-containerworker">
+    <h2>Pending Bookings</h2>
+    <div className="jobs-gridworker">
+      {pendingBookings.length > 0 ? (
+        pendingBookings.map((booking) => (
+          <div key={booking.booking_id} className="job-cardworker">
+            <h3>Service: {booking.service_name}</h3>
+            <p>User ID: {booking.user_id}</p>
+            <p>Requested On: {new Date(booking.created_at).toLocaleString()}</p>
+            <button onClick={() => updateBookingStatusworker(booking.booking_id, "accepted")} className="accept-btnworker">Accept</button>
+            <button onClick={() => updateBookingStatusworker(booking.booking_id, "cancelled")} className="cancel-btnworker">Cancel</button>
+          </div>
+        ))
+      ) : (
+        <p>No pending bookings.</p>
+      )}
+    </div>
+  </div>
+)}
+
         </main>
       </div>
     </div>
+
+
+
   );
 }

@@ -283,18 +283,95 @@ app.get("/workerDetails", async (req, res) => {
 });
 
 
-app.get("/worker/:workerId", (req, res) => {
+app.get("/worker/:workerId", async (req, res) => {
   const workerId = req.params.workerId;
-  const query = "SELECT * FROM workers WHERE id = ?";
-  
-  db.query(query, [workerId], (err, result) => {
+  console.log(`Fetching worker details for ID: ${workerId}`); // Debugging log
+
+  const query = `
+    SELECT id, name, email, phone, latitude, longitude, image, status, rating
+    FROM workers WHERE id = ?
+  `;
+
+  db.query(query, [workerId], async (err, result) => {
     if (err) {
-      res.status(500).json({ error: "Database error" });
+      console.error("Database error:", err); // Log error
+      return res.status(500).json({ error: "Database error", details: err.message });
+    }
+
+    if (result.length === 0) {
+      console.warn(`Worker not found for ID: ${workerId}`); // Log missing worker
+      return res.status(404).json({ error: "Worker not found" });
+    }
+
+    let worker = result[0];
+
+    // Reverse Geocoding for location
+    try {
+      console.log(`Fetching location for lat: ${worker.latitude}, lon: ${worker.longitude}`);
+      const geoRes = await axios.get("https://nominatim.openstreetmap.org/reverse", {
+        params: {
+          lat: worker.latitude,
+          lon: worker.longitude,
+          format: "json"
+        }
+      });
+      worker.location = geoRes.data.display_name || "Unknown Location";
+    } catch (geoError) {
+      console.error("Geocoding error:", geoError); // Log geocoding failure
+      worker.location = "Location not found";
+    }
+
+    res.json(worker);
+  });
+});
+
+
+app.get("/worker/:workerId/pendingBookings", (req, res) => {
+  const { workerId } = req.params;
+  
+  const sql = `
+    SELECT b.id AS booking_id, b.user_id, s.name AS service_name, b.created_at
+    FROM bookings b
+    JOIN services s ON b.service_id = s.id
+    WHERE b.worker_id = ? AND b.status = 'pending'
+  `;
+
+  db.query(sql, [workerId], (err, results) => {
+    if (err) return res.status(500).json({ error: "Database error" });
+    res.json(results);
+  });
+});
+
+
+app.post("/booking/:bookingId/update", (req, res) => {
+  const { bookingId } = req.params;
+  const { status, workerId } = req.body; // Include workerId in request body
+
+  if (!["accepted", "cancelled"].includes(status)) {
+    return res.status(400).json({ error: "Invalid status" });
+  }
+
+  // Update booking status
+  const updateBookingSql = "UPDATE bookings SET status = ? WHERE id = ?";
+  db.query(updateBookingSql, [status, bookingId], (err, result) => {
+    if (err) return res.status(500).json({ error: "Database error while updating booking" });
+
+    // If booking is cancelled, update worker status to "available"
+    if (status === "cancelled") {
+      const updateWorkerSql = "UPDATE workers SET status = 'available' WHERE id = ?";
+      db.query(updateWorkerSql, [workerId], (err, workerResult) => {
+        if (err) return res.status(500).json({ error: "Database error while updating worker status" });
+
+        return res.json({ success: true, message: `Booking ${status} and worker set to available` });
+      });
     } else {
-      res.json(result[0]);
+      // If accepted, just return success
+      return res.json({ success: true, message: `Booking ${status} successfully` });
     }
   });
 });
+
+
 
 // **Start the Server**
 const PORT = 5000;
