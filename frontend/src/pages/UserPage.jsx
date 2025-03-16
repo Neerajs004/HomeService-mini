@@ -339,34 +339,99 @@ const sendMessage = () => {
             </div>
           )}
 
-           {activeSection === "chatbox" && (
-              <div>
-                <h2>Chat</h2>
-                <div>
-                  <h3>Contacts</h3>
-                  {pendingBookings.map((booking) => (
-                    <button key={booking.worker_id} onClick={() => fetchMessages(booking.worker_id)}>
-                      {booking.worker_name}
-                    </button>
-                  ))}
-                </div>
-
-                {chatUser && (
-                  <div>
-                    <h3>Chat with Worker</h3>
-                    <div>
-                      {messages.map((msg, idx) => (
-                        <p key={idx} style={{ textAlign: msg.sender_id === userId ? "right" : "left" }}>
-                          {msg.message}
-                        </p>
-                      ))}
-                    </div>
-                    <input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} />
-                    <button onClick={sendMessage}>Send</button>
-                  </div>
-                )}
+{activeSection === "chatbox" && (
+  <div className="chat-container">
+    <div className="contacts-list">
+      <div className="contacts-header">
+        <h3>Conversations</h3>
+      </div>
+      
+      {pendingBookings.length > 0 ? (
+        pendingBookings.map((booking) => (
+          <div
+            key={booking.worker_id}
+            className={`contact-item ${chatUser === booking.worker_id ? 'active' : ''}`}
+            onClick={() => fetchMessages(booking.worker_id)}
+          >
+            <div className="contact-avatar">
+              {booking.worker_name ? booking.worker_name.charAt(0).toUpperCase() : "?"}
+            </div>
+            <div className="contact-info">
+              <div className="contact-name">{booking.worker_name}</div>
+              <div className="contact-preview">
+                {booking.status === 'pending' ? '⏳ Pending' : booking.status === 'accepted' ? '✅ Accepted' : '❌ Cancelled'}
               </div>
-            )}
+            </div>
+          </div>
+        ))
+      ) : (
+        <div className="empty-state">
+          <div className="empty-state-icon">📭</div>
+          <p className="empty-state-text">No bookings yet. Book a service to start chatting.</p>
+        </div>
+      )}
+    </div>
+
+    {chatUser ? (
+      <div className="chat-window">
+        <div className="chat-header">
+          <div className="contact-avatar">
+            {pendingBookings.find(b => b.worker_id === chatUser)?.worker_name.charAt(0).toUpperCase() || "?"}
+          </div>
+          <div className="chat-header-info">
+            <div className="chat-header-name">
+              {pendingBookings.find(b => b.worker_id === chatUser)?.worker_name || "Service Provider"}
+            </div>
+            <div className="chat-header-status">Service Provider</div>
+          </div>
+        </div>
+        
+        <div className="messages-container">
+          {messages.length > 0 ? (
+            messages.map((msg, idx) => (
+              <div
+                key={idx}
+                className={`message ${msg.sender_id === userId ? 'outgoing-message' : 'incoming-message'}`}
+              >
+                <div className="sender-label">
+                  {msg.sender_id === userId ? 'You' : pendingBookings.find(b => b.worker_id === chatUser)?.worker_name || 'Worker'}
+                </div>
+                <div className="message-content">{msg.message}</div>
+                <div className="message-time">
+                  {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="empty-state">
+              <div className="empty-state-icon">💬</div>
+              <p className="empty-state-text">No messages yet. Say hello!</p>
+            </div>
+          )}
+          <div id="messagesEnd" />
+        </div>
+        
+        <div className="message-input">
+          <input
+            type="text"
+            placeholder="Type a message..."
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+          />
+          <button onClick={sendMessage}>
+            <span>Send</span>
+          </button>
+        </div>
+      </div>
+    ) : (
+      <div className="no-chat-selected">
+        <div className="no-chat-icon">💬</div>
+        <p>Select a conversation to start chatting</p>
+      </div>
+    )}
+  </div>
+)}
 
 
           {selectedWorker ? (

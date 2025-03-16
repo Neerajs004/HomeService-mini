@@ -212,47 +212,57 @@ export default function WorkerDashboard() {
 
           {/* Chat section - only show when activeSection is "chatbox" */}
           {activeSection === "chatbox" && (
-            <div className="chat-containerworker">
-              <h2>Chat</h2>
-              <div className="contacts-sectionworker">
-              <h3>Contacts</h3>
-              {acceptedBookings.map((booking) => (
-                <button 
-                  key={booking.user_id} 
-                  onClick={() => fetchMessages(booking.user_id)}
-                  className="contact-btnworker"
-                >
-                  {booking.username}
-                </button>
-              ))}
-            </div>
+  <div className="chat-containerworker">
+    <div className="contacts-sectionworker">
+      <h3>Contacts</h3>
+      {acceptedBookings.map((booking) => (
+        <button 
+          key={booking.user_id} 
+          onClick={() => fetchMessages(booking.user_id)}
+          className={`contact-btnworker ${chatUser === booking.user_id ? 'active-chatworker' : ''}`}
+        >
+          {booking.username}
+        </button>
+      ))}
+    </div>
 
-
-              {chatUser && (
-                <div className="chat-windowworker">
-                  <h3>Chat with User {chatUser}</h3>
-                  <div className="messages-containerworker">
-                    {messages.map((msg, idx) => (
-                      <p 
-                        key={idx} 
-                        className={msg.sender_id === workerId ? "outgoing-messageworker" : "incoming-messageworker"}
-                      >
-                        {msg.message}
-                      </p>
-                    ))}
+    {chatUser && (
+      <div className="chat-windowworker">
+        <h3>Chat with {acceptedBookings.find(booking => booking.user_id === chatUser)?.username || `User ${chatUser}`}</h3>
+        <div className="messages-containerworker">
+          {messages.map((msg, idx) => {
+            const isWorker = msg.sender_id === workerId;
+            return (
+              <div 
+                key={idx} 
+                className={isWorker ? "outgoing-messageworker" : "incoming-messageworker"}
+              >
+                <span className={`message-labelworker ${isWorker ? 'worker-labelworker' : 'user-labelworker'}`}>
+                  {isWorker ? worker.name : acceptedBookings.find(booking => booking.user_id === chatUser)?.username || `User ${chatUser}`}
+                </span>
+                {msg.message}
+                {msg.timestamp && (
+                  <div className="message-timeworker">
+                    {new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                   </div>
-                  <div className="message-inputworker">
-                    <input 
-                      value={newMessage} 
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Type a message..."
-                    />
-                    <button onClick={sendMessage}>Send</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="message-inputworker">
+          <input 
+            value={newMessage} 
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Type a message..."
+            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+          />
+          <button onClick={sendMessage}>Send</button>
+        </div>
+      </div>
+    )}
+  </div>
+)}
         </main>
       </div>
     </div>
