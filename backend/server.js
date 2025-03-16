@@ -11,7 +11,21 @@ require("dotenv").config();
 
 
 
+
 const app = express();
+
+const http = require("http");
+const { Server } = require("socket.io");
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+  },
+});
+
+// Store connected users
+const onlineUsers = new Map();
 app.use(cors());
 app.use(bodyParser.json());
 
@@ -372,9 +386,75 @@ app.post("/booking/:bookingId/update", (req, res) => {
 });
 
 
+  app.get("/worker/:workerId/acceptedBookings", (req, res) => {
+    const { workerId } = req.params;
+  
+    const sql = `
+      SELECT b.user_id, u.username
+      FROM bookings b
+      JOIN user u ON b.user_id = u.id
+      WHERE b.worker_id = ? AND b.status = 'accepted'
+    `;
+  
+    db.query(sql, [workerId], (err, results) => {
+      if (err) return res.status(500).json({ error: "Database error" });
+      res.json(results);
+    });
+  });
+  
+
+
+//message
+io.on("connection", (socket) => {
+  console.log("New user connected", socket.id);
+
+  socket.on("registerUser", (userId) => {
+    onlineUsers.set(userId, socket.id);
+  });
+
+  socket.on("sendMessage", ({ senderId, receiverId, message }) => {
+    const sql = "INSERT INTO messages (sender_id, receiver_id, message) VALUES (?, ?, ?)";
+    db.query(sql, [senderId, receiverId, message], (err) => {
+      if (err) return console.error("Message saving failed:", err);
+
+      const receiverSocket = onlineUsers.get(receiverId);
+      if (receiverSocket) {
+        io.to(receiverSocket).emit("receiveMessage", { senderId, message });
+      }
+    });
+  });
+
+  socket.on("disconnect", () => {
+    onlineUsers.forEach((value, key) => {
+      if (value === socket.id) {
+        onlineUsers.delete(key);
+      }
+    });
+    console.log("User disconnected", socket.id);
+  });
+});
+
+//chat history
+app.get("/messages", (req, res) => {
+  const { senderId, receiverId } = req.query;
+
+  const sql = `
+    SELECT sender_id, receiver_id, message, timestamp 
+    FROM messages 
+    WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
+    ORDER BY timestamp ASC
+  `;
+
+  db.query(sql, [senderId, receiverId, receiverId, senderId], (err, results) => {
+    if (err) return res.status(500).json({ error: "Database error" });
+    res.json(results);
+  });
+});
+
+
 
 // **Start the Server**
 const PORT = 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });

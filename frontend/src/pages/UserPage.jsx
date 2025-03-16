@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../styles/user.css";
+import { io } from "socket.io-client";
+
+
+const socket = io("http://localhost:5000");
 
 const UserPage = () => {
   const { userId } = useParams();
@@ -19,6 +23,9 @@ const UserPage = () => {
   const [expandedBookingId, setExpandedBookingId] = useState(null);
   const [bookingDetails, setBookingDetails] = useState({});
   const [isLoading, setIsLoading] = useState(true);
+  const [chatUser, setChatUser] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
 
   useEffect(() => {
     if (!userId) {
@@ -29,6 +36,18 @@ const UserPage = () => {
     fetchUserName();
     fetchPendingBookings(); // ✅ Fetch pending bookings when component loads
     setTimeout(() => setIsLoading(false), 1500);
+  }, [userId]);
+
+  useEffect(() => {
+    socket.emit("registerUser", userId);
+
+    socket.on("receiveMessage", (msg) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+
+    return () => {
+      socket.off("receiveMessage");
+    };
   }, [userId]);
   
 
@@ -187,6 +206,22 @@ const fetchWorkerDetails = async (workerId) => {
 };
 
 
+const fetchMessages = async (receiverId) => {
+  setChatUser(receiverId);
+  const res = await fetch(`http://localhost:5000/messages?senderId=${userId}&receiverId=${receiverId}`);
+  const data = await res.json();
+  setMessages(data);
+};
+
+const sendMessage = () => {
+  if (!newMessage.trim()) return;
+  
+  socket.emit("sendMessage", { senderId: userId, receiverId: chatUser, message: newMessage });
+  setMessages([...messages, { sender_id: userId, message: newMessage }]);
+  setNewMessage("");
+};
+
+
   return (
     <div className="user-"> 
 
@@ -218,10 +253,14 @@ const fetchWorkerDetails = async (workerId) => {
             <span>Accepted</span>
           </div>
 
-          <div className="nav-item">
+         <div 
+            className={`nav-item ${activeSection === "chatbox" ? 'active' : ''}`} 
+            onClick={() => setActiveSection("chatbox")}
+          >
             <span className="nav-icon">💬</span>
             <span>Chatbox</span>
           </div>
+
 
           <div className="nav-item">
             <span className="nav-icon">📜</span>
@@ -270,37 +309,65 @@ const fetchWorkerDetails = async (workerId) => {
 
 
                   </div>
-
-
-                  {expandedBookingId === booking.id && bookingDetails[booking.id] && (
-  <div className="booking-details">
-    <div className="details-grid">
-      <div className="worker-profile">
-        {bookingDetails[booking.id].image ? (
-          <img
-            src={bookingDetails[booking.id].image} // ✅ Cloudinary Image URL
-            alt={bookingDetails[booking.id].name}
-            className="worker-thumbnail"
-          />
-        ) : (
-          <p>No Image Available</p>
-        )}
-        <h4>{bookingDetails[booking.id].name}</h4>
-      </div>
-      <div className="details-info">
-        <p><strong>Location:</strong> {bookingDetails[booking.id].location}</p>
-        <p><strong>Rating:</strong> ⭐ {bookingDetails[booking.id].rating}</p>
-        <p><strong>Booking Time:</strong> {bookingDetails[booking.id].booking_time}</p>
-      </div>
-    </div>
-  </div>
-)}
+                       {expandedBookingId === booking.id && bookingDetails[booking.id] && (
+                    <div className="booking-details">
+                      <div className="details-grid">
+                        <div className="worker-profile">
+                          {bookingDetails[booking.id].image ? (
+                            <img
+                              src={bookingDetails[booking.id].image} // ✅ Cloudinary Image URL
+                              alt={bookingDetails[booking.id].name}
+                              className="worker-thumbnail"
+                            />
+                          ) : (
+                            <p>No Image Available</p>
+                          )}
+                          <h4>{bookingDetails[booking.id].name}</h4>
+                        </div>
+                        <div className="details-info">
+                          <p><strong>Location:</strong> {bookingDetails[booking.id].location}</p>
+                          <p><strong>Rating:</strong> ⭐ {bookingDetails[booking.id].rating}</p>
+                          <p><strong>Booking Time:</strong> {bookingDetails[booking.id].booking_time}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
       
                 </div>
               ))}
             </div>
           )}
+
+           {activeSection === "chatbox" && (
+              <div>
+                <h2>Chat</h2>
+                <div>
+                  <h3>Contacts</h3>
+                  {pendingBookings.map((booking) => (
+                    <button key={booking.worker_id} onClick={() => fetchMessages(booking.worker_id)}>
+                      {booking.worker_name}
+                    </button>
+                  ))}
+                </div>
+
+                {chatUser && (
+                  <div>
+                    <h3>Chat with Worker</h3>
+                    <div>
+                      {messages.map((msg, idx) => (
+                        <p key={idx} style={{ textAlign: msg.sender_id === userId ? "right" : "left" }}>
+                          {msg.message}
+                        </p>
+                      ))}
+                    </div>
+                    <input value={newMessage} onChange={(e) => setNewMessage(e.target.value)} />
+                    <button onClick={sendMessage}>Send</button>
+                  </div>
+                )}
+              </div>
+            )}
+
 
           {selectedWorker ? (
               // Display worker details

@@ -4,13 +4,19 @@ import {
   Star, Clock, DollarSign, Bell, Settings, Home, User, LogOut, Mail, Phone, MapPin, Calendar, Briefcase
 } from "lucide-react";
 import "../styles/WorkerDashboard.css";
+import { io } from "socket.io-client";
+
+const socket = io("http://localhost:5000");
 
 export default function WorkerDashboard() {
+  const [activeSection, setActiveSection] = useState("home");
   const { workerId } = useParams(); // Get worker ID from URL
   const [worker, setWorker] = useState(null);
   const [pendingBookings, setPendingBookings] = useState([]);
-  const [showJobsworker, setShowJobsworker] = useState(false);
-
+  const [acceptedBookings, setAcceptedBookings] = useState([]);
+  const [chatUser, setChatUser] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
 
   useEffect(() => {
     const fetchWorkerDetails = async () => {
@@ -24,6 +30,19 @@ export default function WorkerDashboard() {
     };
 
     fetchWorkerDetails();
+      fetchAcceptedBookingsworker(); // Fetch accepted users on load    
+  }, [workerId]);
+
+  useEffect(() => {
+    socket.emit("registerUser", workerId);
+
+    socket.on("receiveMessage", (msg) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+
+    return () => {
+      socket.off("receiveMessage");
+    };
   }, [workerId]);
 
   const fetchPendingBookingsworker = async () => {
@@ -31,12 +50,21 @@ export default function WorkerDashboard() {
       const response = await fetch(`http://localhost:5000/worker/${workerId}/pendingBookings`);
       const data = await response.json();
       setPendingBookings(data);
-      setShowJobsworker(true);
+      setActiveSection("jobs"); // Set active section to jobs when fetching bookings
     } catch (error) {
       console.error("Error fetching pending bookings:", error);
     }
   };
   
+  const fetchAcceptedBookingsworker = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/worker/${workerId}/acceptedBookings`);
+      const data = await response.json();
+      setAcceptedBookings(data);
+    } catch (error) {
+      console.error("Error fetching accepted bookings:", error);
+    }
+  };
 
   
   const updateBookingStatusworker = async (bookingId, status) => {
@@ -44,16 +72,31 @@ export default function WorkerDashboard() {
       await fetch(`http://localhost:5000/booking/${bookingId}/update`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status, workerId }), // Include workerId
+        body: JSON.stringify({ status, workerId }),
       });
   
-      // Refresh bookings after updating
-      fetchPendingBookingsworker();
+      fetchPendingBookingsworker();   // Refresh pending jobs
+      fetchAcceptedBookingsworker();  // Refresh accepted users for chat
     } catch (error) {
       console.error("Error updating booking:", error);
     }
   };
   
+
+  const fetchMessages = async (userId) => {
+    setChatUser(userId);
+    const res = await fetch(`http://localhost:5000/messages?senderId=${workerId}&receiverId=${userId}`);
+    const data = await res.json();
+    setMessages(data);
+  };
+
+  const sendMessage = () => {
+    if (!newMessage.trim()) return;
+    
+    socket.emit("sendMessage", { senderId: workerId, receiverId: chatUser, message: newMessage });
+    setMessages([...messages, { sender_id: workerId, message: newMessage }]);
+    setNewMessage("");
+  };
   
   if (!worker) {
     return <p>Loading worker details...</p>;
@@ -67,12 +110,15 @@ export default function WorkerDashboard() {
           <span className="brand-nameworker">ServicePro</span>
         </div>
         <div className="nav-middleworker">
-          <button className="nav-btnworker"><Home className="icon-smworker" /> Home</button>
+          <button className="nav-btnworker" onClick={() => setActiveSection("home")}>
+            <Home className="icon-smworker" /> Home
+          </button>
           <button className="nav-btnworker" onClick={fetchPendingBookingsworker}>
             <Briefcase className="icon-smworker" /> Jobs
           </button>
-
-          <button className="nav-btnworker"><Mail className="icon-smworker" /> Messages</button>
+          <button className="nav-btnworker" onClick={() => setActiveSection("chatbox")}>
+            <Mail className="icon-smworker" /> Messages
+          </button>
         </div>
         <div className="nav-rightworker">
           <button className="notification-btnworker">
@@ -86,7 +132,7 @@ export default function WorkerDashboard() {
       </nav>
 
       <div className="dashboard-container1worker">
-      <aside className="sidebarworker">
+        <aside className="sidebarworker">
           <div className="profile-sectionworker">
             <img src={worker.image || "/placeholder.svg"} alt="Worker" className="worker-avatarworker" />
             <span className="status-badgeworker">{worker.status || "Unavailable"}</span>
@@ -95,11 +141,10 @@ export default function WorkerDashboard() {
               <h2>{worker.name}</h2>
 
               <div className="info-gridworker">
-              <div className="info-itemworker">
-  <Phone className="info-iconworker" />
-  <span>{worker.phone ? worker.phone : "Phone not available"}</span>
-</div>
-
+                <div className="info-itemworker">
+                  <Phone className="info-iconworker" />
+                  <span>{worker.phone ? worker.phone : "Phone not available"}</span>
+                </div>
                 <div className="info-itemworker">
                   <Mail className="info-iconworker" />
                   <span>{worker.email || "Not available"}</span>
@@ -114,58 +159,102 @@ export default function WorkerDashboard() {
         </aside>
 
         <main className="main-contentworker">
-          <section className="stats-sectionworker">
-            <div className="stat-cardworker">
-              <h3>Rating</h3>
-              <div className="ratingworker">
-                <Star className="star-iconworker" />
-                <span className="rating-valueworker">{worker.rating || "N/A"}</span>
-              </div>
-            </div>
-            <div className="stat-cardworker">
-              <h3>Completed Jobs</h3>
-              <div className="completed-jobsworker">
-                <span className="job-countworker">{worker.completed_jobs || 0}</span>
-                <div className="progress-barworker">
-                  <div className="progressworker" style={{ width: `${worker.job_progress || 0}%` }}></div>
+          {/* Home section - only show when activeSection is "home" */}
+          {activeSection === "home" && (
+            <section className="stats-sectionworker">
+              <div className="stat-cardworker">
+                <h3>Rating</h3>
+                <div className="ratingworker">
+                  <Star className="star-iconworker" />
+                  <span className="rating-valueworker">{worker.rating || "N/A"}</span>
                 </div>
               </div>
-            </div>
-            <div className="stat-cardworker">
-              <h3>Earnings</h3>
-              <div className="earningsworker">
-                <DollarSign className="dollar-iconworker" />
-                <span className="amountworker">{worker.earnings || "0"}</span>
+              <div className="stat-cardworker">
+                <h3>Completed Jobs</h3>
+                <div className="completed-jobsworker">
+                  <span className="job-countworker">{worker.completed_jobs || 0}</span>
+                  <div className="progress-barworker">
+                    <div className="progressworker" style={{ width: `${worker.job_progress || 0}%` }}></div>
+                  </div>
+                </div>
+              </div>
+              <div className="stat-cardworker">
+                <h3>Earnings</h3>
+                <div className="earningsworker">
+                  <DollarSign className="dollar-iconworker" />
+                  <span className="amountworker">{worker.earnings || "0"}</span>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Jobs section - only show when activeSection is "jobs" */}
+          {activeSection === "jobs" && (
+            <div className="jobs-containerworker">
+              <h2>Pending Bookings</h2>
+              <div className="jobs-gridworker">
+                {pendingBookings.length > 0 ? (
+                  pendingBookings.map((booking) => (
+                    <div key={booking.booking_id} className="job-cardworker">
+                      <h3>Service: {booking.service_name}</h3>
+                      <p>User ID: {booking.user_id}</p>
+                      <p>Requested On: {new Date(booking.created_at).toLocaleString()}</p>
+                      <button onClick={() => updateBookingStatusworker(booking.booking_id, "accepted")} className="accept-btnworker">Accept</button>
+                      <button onClick={() => updateBookingStatusworker(booking.booking_id, "cancelled")} className="cancel-btnworker">Cancel</button>
+                    </div>
+                  ))
+                ) : (
+                  <p>No pending bookings.</p>
+                )}
               </div>
             </div>
-          </section>
+          )}
 
-          {showJobsworker && (
-  <div className="jobs-containerworker">
-    <h2>Pending Bookings</h2>
-    <div className="jobs-gridworker">
-      {pendingBookings.length > 0 ? (
-        pendingBookings.map((booking) => (
-          <div key={booking.booking_id} className="job-cardworker">
-            <h3>Service: {booking.service_name}</h3>
-            <p>User ID: {booking.user_id}</p>
-            <p>Requested On: {new Date(booking.created_at).toLocaleString()}</p>
-            <button onClick={() => updateBookingStatusworker(booking.booking_id, "accepted")} className="accept-btnworker">Accept</button>
-            <button onClick={() => updateBookingStatusworker(booking.booking_id, "cancelled")} className="cancel-btnworker">Cancel</button>
-          </div>
-        ))
-      ) : (
-        <p>No pending bookings.</p>
-      )}
-    </div>
-  </div>
-)}
+          {/* Chat section - only show when activeSection is "chatbox" */}
+          {activeSection === "chatbox" && (
+            <div className="chat-containerworker">
+              <h2>Chat</h2>
+              <div className="contacts-sectionworker">
+              <h3>Contacts</h3>
+              {acceptedBookings.map((booking) => (
+                <button 
+                  key={booking.user_id} 
+                  onClick={() => fetchMessages(booking.user_id)}
+                  className="contact-btnworker"
+                >
+                  {booking.username}
+                </button>
+              ))}
+            </div>
 
+
+              {chatUser && (
+                <div className="chat-windowworker">
+                  <h3>Chat with User {chatUser}</h3>
+                  <div className="messages-containerworker">
+                    {messages.map((msg, idx) => (
+                      <p 
+                        key={idx} 
+                        className={msg.sender_id === workerId ? "outgoing-messageworker" : "incoming-messageworker"}
+                      >
+                        {msg.message}
+                      </p>
+                    ))}
+                  </div>
+                  <div className="message-inputworker">
+                    <input 
+                      value={newMessage} 
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      placeholder="Type a message..."
+                    />
+                    <button onClick={sendMessage}>Send</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </main>
       </div>
     </div>
-
-
-
   );
 }
