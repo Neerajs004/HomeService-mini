@@ -1900,7 +1900,6 @@ body {
 .messages-containerworker {
   flex: 1;
   padding: 15px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1984,7 +1983,6 @@ body {
 
 /* Message Input */
 .message-inputworker {
-  display: flex;
   padding: 10px;
   background-color: #f0f0f0;
   border-top: 1px solid #ddd;
