@@ -1678,7 +1678,6 @@ body {
 }
 
 .message-inputworker {
-  flex: 1;
   padding: 0.85rem 1rem;
   border: 1px solid var(--worker-neutral-300);
   border-radius: 1.5rem;
@@ -1989,7 +1988,7 @@ body {
 }
 
 .message-inputworker input {
-  flex: 1;
+  width: 328px;
   padding: 12px 15px;
   border: none;
   border-radius: 20px;
