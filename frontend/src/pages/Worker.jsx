@@ -56,6 +56,7 @@ export default function WorkerDashboard() {
     }
   };
   
+  
   const fetchAcceptedBookingsworker = async () => {
     try {
       const response = await fetch(`http://localhost:5000/worker/${workerId}/acceptedBookings`);
@@ -193,19 +194,22 @@ export default function WorkerDashboard() {
             <div className="jobs-containerworker">
               <h2>Pending Bookings</h2>
               <div className="jobs-gridworker">
-                {pendingBookings.length > 0 ? (
-                  pendingBookings.map((booking) => (
-                    <div key={booking.booking_id} className="job-cardworker">
-                      <h3>Service: {booking.service_name}</h3>
-                      <p>User ID: {booking.user_id}</p>
-                      <p>Requested On: {new Date(booking.created_at).toLocaleString()}</p>
-                      <button onClick={() => updateBookingStatusworker(booking.booking_id, "accepted")} className="accept-btnworker">Accept</button>
-                      <button onClick={() => updateBookingStatusworker(booking.booking_id, "cancelled")} className="cancel-btnworker">Cancel</button>
-                    </div>
-                  ))
-                ) : (
-                  <p>No pending bookings.</p>
-                )}
+              {pendingBookings.length > 0 ? (
+  pendingBookings.map((booking) => (
+    <div key={booking.booking_id} className="job-cardworker">
+      <h3>Service: {booking.service_name}</h3>
+      <p>Name: {booking.user_name}</p>
+      <p>Location: {booking.user_location}</p> {/* Now displays actual address */}
+      <p>Phone: {booking.user_phone}</p>
+      <p>Requested On: {new Date(booking.created_at).toLocaleString()}</p>
+      <button onClick={() => updateBookingStatusworker(booking.booking_id, "accepted")} className="accept-btnworker">Accept</button>
+      <button onClick={() => updateBookingStatusworker(booking.booking_id, "cancelled")} className="cancel-btnworker">Cancel</button>
+    </div>
+  ))
+) : (
+  <p>No pending bookings.</p>
+)}
+
               </div>
             </div>
           )}

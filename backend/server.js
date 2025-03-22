@@ -340,21 +340,56 @@ app.get("/worker/:workerId", async (req, res) => {
 });
 
 
-app.get("/worker/:workerId/pendingBookings", (req, res) => {
+app.get("/worker/:workerId/pendingBookings", async (req, res) => {
   const { workerId } = req.params;
-  
+  if (!workerId) return res.status(400).json({ error: "Worker ID required" });
+
   const sql = `
-    SELECT b.id AS booking_id, b.user_id, s.name AS service_name, b.created_at
+    SELECT 
+      b.id AS booking_id, 
+      u.id AS user_id,
+      u.username AS user_name, 
+      u.phone AS user_phone,
+      u.latitude, 
+      u.longitude,
+      s.name AS service_name, 
+      b.status, 
+      b.created_at
     FROM bookings b
+    JOIN user u ON b.user_id = u.id
     JOIN services s ON b.service_id = s.id
     WHERE b.worker_id = ? AND b.status = 'pending'
   `;
 
-  db.query(sql, [workerId], (err, results) => {
+  db.query(sql, [workerId], async (err, results) => {
     if (err) return res.status(500).json({ error: "Database error" });
-    res.json(results);
+
+    if (results.length === 0) return res.json([]); // Return empty array if no bookings
+
+    // Convert latitude & longitude to location using OpenStreetMap API
+    const updatedResults = await Promise.all(
+      results.map(async (booking) => {
+        try {
+          const geoRes = await axios.get("https://nominatim.openstreetmap.org/reverse", {
+            params: {
+              lat: booking.latitude,
+              lon: booking.longitude,
+              format: "json",
+            },
+          });
+
+          booking.user_location = geoRes.data.display_name || "Location not found";
+        } catch (geoError) {
+          booking.user_location = "Location not found";
+        }
+        return booking;
+      })
+    );
+
+    res.json(updatedResults);
   });
 });
+
 
 
 app.post("/booking/:bookingId/update", (req, res) => {
