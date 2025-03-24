@@ -1136,3 +1136,19 @@ text-align: center;
   font-size: 16px;
   max-width: 250px;
 }
+/* Pay Button */
+.pay-button {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.pay-button:hover {
+  background-color: #218838;
+}

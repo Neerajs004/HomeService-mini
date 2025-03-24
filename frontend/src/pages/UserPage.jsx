@@ -212,6 +212,26 @@ const fetchMessages = async (receiverId) => {
   const data = await res.json();
   setMessages(data);
 };
+ // Handle payment
+ const handlePayment = (amount) => {
+  alert(`Paying ₹{amount}...`); // Simulate payment
+};
+
+// Render message content with Pay Now button if it's a payment message
+const renderMessageContent = (message) => {
+  if (message.includes("Please pay")) {
+    const amount = message.match(/\₹\d+/); // Extract the amount
+    return (
+      <div>
+        <div>{message}</div>
+        <button className="pay-button" onClick={() => handlePayment(amount)}>
+          Pay Now
+        </button>
+      </div>
+    );
+  }
+  return <div>{message}</div>;
+};
 
 const sendMessage = () => {
   if (!newMessage.trim()) return;
@@ -220,6 +240,7 @@ const sendMessage = () => {
   setMessages([...messages, { sender_id: userId, message: newMessage }]);
   setNewMessage("");
 };
+
 
 
   return (
@@ -396,7 +417,7 @@ const sendMessage = () => {
                 <div className="sender-label">
                   {msg.sender_id === userId ? 'You' : pendingBookings.find(b => b.worker_id === chatUser)?.worker_name || 'Worker'}
                 </div>
-                <div className="message-content">{msg.message}</div>
+                <div className="message-content">{renderMessageContent(msg.message)}</div>
                 <div className="message-time">
                   {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                 </div>

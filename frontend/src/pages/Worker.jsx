@@ -17,6 +17,9 @@ export default function WorkerDashboard() {
   const [chatUser, setChatUser] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
+  const [showRatePopup, setShowRatePopup] = useState(false);
+  const [rate, setRate] = useState(0);
+  const [additionalExpense, setAdditionalExpense] = useState(0);
 
   useEffect(() => {
     const fetchWorkerDetails = async () => {
@@ -98,6 +101,23 @@ export default function WorkerDashboard() {
     setMessages([...messages, { sender_id: workerId, message: newMessage }]);
     setNewMessage("");
   };
+  // Handle rate submission
+  const handleRateSubmit = () => {
+    if (rate <= 0) {
+      alert("Please enter a valid rate.");
+      return;
+    }
+
+    const totalAmount = rate + additionalExpense;
+    const message = `Please pay ₹${totalAmount} for the work done. Rate: ₹${rate}, Additional Expense: ₹${additionalExpense}.`;
+
+    socket.emit("sendMessage", { senderId: workerId, receiverId: chatUser, message });
+    setMessages([...messages, { sender_id: workerId, message }]);
+    setShowRatePopup(false);
+    setRate(0);
+    setAdditionalExpense(0);
+  };
+
   
   if (!worker) {
     return <p>Loading worker details...</p>;
@@ -262,9 +282,40 @@ export default function WorkerDashboard() {
             onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
           />
           <button onClick={sendMessage}>Send</button>
+          <button onClick={() => setShowRatePopup(true)}>Request Payment</button>
         </div>
       </div>
     )}
+         {/* Rate Popup */}
+         {showRatePopup && (
+        <div className="rate-popup-overlay">
+          <div className="rate-popup-container">
+            <h3>Request Payment</h3>
+            <div className="rate-input-field">
+              <label>Rate (₹):</label>
+              <input 
+                type="number" 
+                value={rate} 
+                onChange={(e) => setRate(parseFloat(e.target.value))}
+                min="0"
+              />
+            </div>
+            <div className="rate-input-field">
+              <label>Additional Expense (₹):</label>
+              <input 
+                type="number" 
+                value={additionalExpense} 
+                onChange={(e) => setAdditionalExpense(parseFloat(e.target.value))}
+                min="0"
+              />
+            </div>
+            <div className="rate-popup-buttons">
+              <button onClick={handleRateSubmit}>Submit</button>
+              <button onClick={() => setShowRatePopup(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
   </div>
 )}
         </main>
