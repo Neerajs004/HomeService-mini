@@ -480,7 +480,7 @@ app.post("/booking/:bookingId/update", (req, res) => {
     const { workerId } = req.params;
   
     const sql = `
-      SELECT b.user_id, u.username
+      SELECT b.id AS booking_id,b.user_id, u.username
       FROM bookings b
       JOIN user u ON b.user_id = u.id
       WHERE b.worker_id = ? AND b.status = 'accepted'
@@ -532,7 +532,7 @@ app.get("/messages", (req, res) => {
   const { senderId, receiverId } = req.query;
 
   const sql = `
-    SELECT sender_id, receiver_id, message, timestamp, sender_type 
+    SELECT sender_id, receiver_id, message, timestamp, sender_type, pay 
     FROM messages 
     WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
     ORDER BY timestamp ASC
@@ -540,12 +540,15 @@ app.get("/messages", (req, res) => {
 
   db.query(sql, [senderId, receiverId, receiverId, senderId], (err, results) => {
     if (err) return res.status(500).json({ error: "Database error" });
-    res.json(results);
+
+    res.json(results); // Ensure the `pay` column is included in the response
   });
 });
 
+
 app.post("/updateBookingExpenses", (req, res) => {
   const { bookingId, workerFee, additionalExpenses } = req.body;
+  console.log("📩 Received Data:", { bookingId, workerFee, additionalExpenses });
 
   if (!bookingId || workerFee === undefined || additionalExpenses === undefined) {
     return res.status(400).json({ error: "All fields are required" });
@@ -553,14 +556,55 @@ app.post("/updateBookingExpenses", (req, res) => {
 
   const totalAmount = parseFloat(workerFee) + parseFloat(additionalExpenses); // Calculate total
 
-  const sql = "UPDATE bookings SET worker_fee = ?, additional_expenses = ?, amount = ? WHERE id = ?";
+  // Update the bookings table
+  const updateBookingSQL = `
+    UPDATE bookings 
+    SET worker_fee = ?, additional_expenses = ?, amount = ? 
+    WHERE id = ?`;
 
-  db.query(sql, [workerFee, additionalExpenses, totalAmount, bookingId], (err, result) => {
-    if (err) return res.status(500).json({ error: "Database error" });
+  db.query(updateBookingSQL, [workerFee, additionalExpenses, totalAmount, bookingId], (err, result) => {
+    if (err) return res.status(500).json({ error: "Database error while updating booking" });
 
-    res.json({ success: true, message: "Booking updated with total amount", totalAmount });
+    // Fetch worker_id and user_id from the bookings table
+    const fetchBookingSQL = "SELECT worker_id, user_id FROM bookings WHERE id = ?";
+    
+    db.query(fetchBookingSQL, [bookingId], (err, rows) => {
+      if (err) return res.status(500).json({ error: "Database error while fetching booking details" });
+
+      if (rows.length === 0) return res.status(404).json({ error: "Booking not found" });
+
+      const { worker_id, user_id } = rows[0];
+
+      // Insert into the payments table
+      const insertPaymentSQL = `
+        INSERT INTO payments (booking_id, worker_id, user_id, amount, status, created_at) 
+        VALUES (?, ?, ?, ?, 'pending', NOW())`;
+
+      db.query(insertPaymentSQL, [bookingId, worker_id, user_id, totalAmount], (err, result) => {
+        if (err) return res.status(500).json({ error: "Database error while inserting payment record" });
+        
+        // Insert a system message into the messages table
+        const insertMessageSQL = `
+          INSERT INTO messages (sender_id, receiver_id, message, sender_type, pay, timestamp) 
+          VALUES (?, ?, ?, 'w', 'p', NOW())`;
+
+        const systemMessage = `Payment request created: ₹${totalAmount}. Please complete the payment.`;
+
+        db.query(insertMessageSQL, [worker_id, user_id, systemMessage], (msgErr) => {
+          if (msgErr) return res.status(500).json({ error: "Database error while inserting message" });
+
+        res.json({
+          success: true,
+          message: "Booking updated and payment record created",
+          totalAmount,
+          paymentId: result.insertId
+        });
+      });
+    });
+  });
   });
 });
+
 
 
 app.get("/getLatestBookingId", (req, res) => {
@@ -578,6 +622,42 @@ app.get("/getLatestBookingId", (req, res) => {
   });
 });
 
+
+//payment
+app.post("/requestPayment", (req, res) => {
+  const { bookingId, workerId, userId, amount } = req.body;
+
+  if (!bookingId || !workerId || !userId || !amount) {
+      return res.status(400).json({ error: "Missing parameters" });
+  }
+
+  const sql = "INSERT INTO payments (booking_id, worker_id, user_id, amount) VALUES (?, ?, ?, ?)";
+  db.query(sql, [bookingId, workerId, userId, amount], (err, result) => {
+      if (err) return res.status(500).json({ error: "Database error" });
+
+      // Send a message to the user with the payment request
+      const message = `Please pay ₹${amount} for your service. Click the button below to proceed.`;
+      const insertMessage = "INSERT INTO messages (sender_id, receiver_id, message, sender_type, timestamp) VALUES (?, ?, ?, 'w', NOW())";
+      db.query(insertMessage, [workerId, userId, message], (msgErr) => {
+          if (msgErr) return res.status(500).json({ error: "Message sending failed" });
+
+          res.json({ success: true, message: "Payment request sent successfully" });
+      });
+  });
+});
+
+app.get("/paymentDetails/:bookingId", (req, res) => {
+  const { bookingId } = req.params;
+
+  const sql = "SELECT * FROM payments WHERE booking_id = ? AND status = 'pending' LIMIT 1";
+  db.query(sql, [bookingId], (err, results) => {
+      if (err) return res.status(500).json({ error: "Database error" });
+
+      if (results.length === 0) return res.status(404).json({ error: "No pending payment found" });
+
+      res.json(results[0]);
+  });
+});
 
 
 

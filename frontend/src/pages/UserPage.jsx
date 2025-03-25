@@ -234,26 +234,11 @@ const fetchMessages = async (receiverId) => {
   const res = await fetch(`http://localhost:5000/messages?senderId=${userId}&receiverId=${receiverId}`);
   const data = await res.json();
   setMessages(data);
+  console.log("data : ",data);
 };
 
 
-// Render message content with Pay Now button if it's a payment message
-const renderMessageContent = (message) => {
-  if (message.includes("Please pay")) {
-    const amount = message.match(/\₹\d+/); // Extract the amount
-    return (
-      <div>
-        <div>{message}</div>
-          
-  <button className="pay-now-btn" onClick={handlePayNow}>
-    Pay Now
-  </button>
-  
-      </div>
-    );
-  }
-  return <div>{message}</div>;
-};
+
 
 const sendMessage = () => {
   if (!newMessage.trim()) return;
@@ -267,24 +252,38 @@ const sendMessage = () => {
 
 
 
-  const handlePayNow = async () => {
-    try {
-      const response = await fetch(`http://localhost:5000/getLatestBookingId?userId=${userId}`);
-      const data = await response.json();
-  
-      if (data.success) {
-        console.log("Navigating to:", `/payment/${data.bookingId}`);
-        navigate(`/payment/${data.bookingId}`);
-      } else {
-        alert("No booking found for payment!");
-      }
-    } catch (error) {
-      console.error("Error fetching booking ID:", error);
-      alert("Failed to fetch booking ID.");
+  //payment popup
+  const renderMessageContent = (message) => {
+    if (message.includes("Please pay ₹")) {
+        const amount = message.match(/\₹\d+/)?.[0] || "₹0";
+        return (
+            <div>
+                <div>{message}</div>
+                <button className="pay-now-btn" onClick={handlePayNow}>
+                    Pay Now
+                </button>
+            </div>
+        );
     }
-  };
+    return <div>{message}</div>;
+};
 
-  
+const handlePayNow = async () => {
+    try {
+        const response = await fetch(`http://localhost:5000/paymentDetails/${selectedBookingId}`);
+        const data = await response.json();
+
+        if (data.error) {
+            alert("No pending payment found.");
+            return;
+        }
+
+        navigate(`/payment/${data.id}`);  // Redirect user to payment page
+    } catch (error) {
+        console.error("Error fetching payment details:", error);
+    }
+};
+
 
   return (
     <div className="user-"> 
@@ -460,7 +459,14 @@ const sendMessage = () => {
           <div className="sender-label">
             {isUser ? 'You' : pendingBookings.find(b => b.worker_id === chatUser)?.worker_name || 'Worker'}
           </div>
-          <div className="message-content">{msg.message}</div>
+          <div className="message-content">{msg.message}
+            {/* Display Pay Button if pay column is 'p' */}
+            {msg.pay === 'p' && (
+              <button className="pay-now-btn" onClick={() => handlePayNow(msg)}>
+                Pay Now
+              </button>
+            )}
+          </div>
           <div className="message-time">
             {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
           </div>
