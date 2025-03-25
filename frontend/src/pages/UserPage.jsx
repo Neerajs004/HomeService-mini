@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef} from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "../styles/user.css";
 import { io } from "socket.io-client";
@@ -26,6 +26,8 @@ const UserPage = () => {
   const [chatUser, setChatUser] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
+  const messagesEndRef = useRef(null);
+const [prevMessageCount, setPrevMessageCount] = useState(0);
 
   useEffect(() => {
     if (!userId) {
@@ -49,6 +51,27 @@ const UserPage = () => {
       socket.off("receiveMessage");
     };
   }, [userId]);
+
+  useEffect(() => {
+    if (chatUser) {
+      const interval = setInterval(() => {
+        fetchMessages(chatUser);
+      }, 2000); // Reload messages every 2 seconds
+  
+      return () => clearInterval(interval); // Cleanup on unmount
+    }
+  }, [chatUser]);
+  
+
+
+  useEffect(() => {
+    if (messages.length > prevMessageCount) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+    setPrevMessageCount(messages.length);
+  }, [messages]);
+  //auto smooth scroll
+  
   
 
   const fetchServices = async () => {
@@ -450,6 +473,7 @@ const sendMessage = () => {
       <p className="empty-state-text">No messages yet. Say hello!</p>
     </div>
   )}
+      <div ref={messagesEndRef}></div>
 </div>
 
         

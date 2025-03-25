@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState ,useRef} from "react";
 import { useParams } from "react-router-dom";
 import {
   Star, Clock, DollarSign, Bell, Settings, Home, User, LogOut, Mail, Phone, MapPin, Calendar, Briefcase
@@ -17,6 +17,8 @@ export default function WorkerDashboard() {
   const [chatUser, setChatUser] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
+  const messagesEndRef = useRef(null);
+  const [prevMessageCount, setPrevMessageCount] = useState(0);
   const [showRatePopup, setShowRatePopup] = useState(false);
   const [rate, setRate] = useState(0);
   const [additionalExpense, setAdditionalExpense] = useState(0);
@@ -47,6 +49,25 @@ export default function WorkerDashboard() {
       socket.off("receiveMessage");
     };
   }, [workerId]);
+
+  useEffect(() => {
+    if (chatUser) {
+      const interval = setInterval(() => {
+        fetchMessages(chatUser);
+      }, 2000); // Reload messages every 2 seconds
+  
+      return () => clearInterval(interval); // Cleanup on unmount
+    }
+  }, [chatUser]);
+
+  
+  useEffect(() => {
+  if (messages.length > prevMessageCount) {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }
+  setPrevMessageCount(messages.length);
+}, [messages]);
+//auto scroll to the end of message  
 
   const fetchPendingBookingsworker = async () => {
     try {
@@ -291,8 +312,11 @@ export default function WorkerDashboard() {
                   {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                 </div>
               </div>
+              
             );
           })}
+          {/* Dummy div to scroll into */}
+    <div ref={messagesEndRef}></div>
         </div>
 
 
