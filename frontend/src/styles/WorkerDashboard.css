@@ -41,6 +41,7 @@ body {
   line-height: 1.6;
   color: var(--worker-neutral-800);
   background-color: var(--worker-neutral-100);
+  overflow: hidden;
 }
 
 .page-containerworker {

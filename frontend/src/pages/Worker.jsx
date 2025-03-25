@@ -19,7 +19,9 @@ export default function WorkerDashboard() {
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef(null);
   const [prevMessageCount, setPrevMessageCount] = useState(0);
+ // const [showRatePup, setShowRatePopup] = useState(false);
   const [showRatePopup, setShowRatePopup] = useState(false);
+  const [selectedBookingId, setSelectedBookingId] = useState(null);
   const [rate, setRate] = useState(0);
   const [additionalExpense, setAdditionalExpense] = useState(0);
 
@@ -125,43 +127,99 @@ export default function WorkerDashboard() {
     setNewMessage("");
   };
   
+  const openRatePopup = (bookingId) => {
+    console.log("📌 Setting selectedBookingId:", bookingId);
+    setSelectedBookingId(bookingId);
+    setRate(0); // Reset the rate input
+    setAdditionalExpense(0);
+    setShowRatePopup(true);
+};
 
   
   // Handle rate submission
   const handleRateSubmit = async () => {
+    console.log("🟢 Submit button clicked"); // ✅ Debugging Log 1
+
     if (rate <= 0) {
-      alert("Please enter a valid rate.");
-      return;
+        alert("❌ Please enter a valid rate.");
+        console.log("❌ Invalid rate, submission stopped."); // ✅ Debugging Log 2
+        return;
     }
-  
+
     const totalAmount = rate + additionalExpense;
-  
+    console.log(`💰 Total Amount Calculated: ₹${totalAmount}`); // ✅ Debugging Log 3
+
     try {
-      const response = await fetch("http://localhost:5000/updateBookingExpenses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bookingId: selectedBookingId, // Make sure bookingId is set correctly
-          workerFee: rate,
-          additionalExpenses: additionalExpense
-        }),
-      });
-  
-      const data = await response.json();
-      if (data.success) {
-        alert(`Payment details updated! Total Amount: ₹${data.totalAmount}`);
-        setShowRatePopup(false);
-        setRate(0);
-        setAdditionalExpense(0);
-      } else {
-        alert("Failed to update payment details.");
-      }
+        console.log("⏳ Sending request to updateBookingExpenses..."); // ✅ Debugging Log 4
+        const response = await fetch("http://localhost:5000/updateBookingExpenses", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                bookingId: selectedBookingId, // Make sure bookingId is set correctly
+                workerFee: rate,
+                additionalExpenses: additionalExpense
+            }),
+        });
+
+        console.log("✅ API Call Completed, Parsing JSON Response"); // ✅ Debugging Log 5
+        const data = await response.json();
+        console.log("📩 API Response:", data); // ✅ Debugging Log 6
+
+        if (data.success) {
+            alert(`✅ Payment details updated! Total Amount: ₹${data.totalAmount}`);
+            console.log("✅ Payment details updated successfully."); // ✅ Debugging Log 7
+            const systemMessage = `Payment request sent: ₹${data.totalAmount}`;
+            socket.emit("sendMessage", { 
+                senderId: workerId, 
+                receiverId: chatUser, 
+                message: systemMessage, 
+                senderType: 'system' 
+            });
+            setShowRatePopup(false);
+            setRate(0);
+            setAdditionalExpense(0);
+        } else {
+            alert("❌ Failed to update payment details.");
+            console.log("❌ API response was unsuccessful."); // ✅ Debugging Log 8
+        }
     } catch (error) {
-      console.error("Error updating booking fee:", error);
+        console.error("❌ Error updating booking fee:", error);
+        alert("❌ An error occurred while updating payment details.");
     }
-  };
-  
-  
+};
+
+  //payment
+  const requestPayment = async () => {
+    if (rate <= 0) {
+        alert("Please enter a valid amount.");
+        return;
+    }
+
+    const totalAmount = rate + additionalExpense;
+
+    try {
+        const response = await fetch("http://localhost:5000/requestPayment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                bookingId: selectedBookingId,
+                workerId,
+                userId: chatUser,
+                amount: totalAmount
+            })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            alert("Payment request sent to the user.");
+            setShowRatePopup(false);
+        } else {
+            alert("Failed to send payment request.");
+        }
+    } catch (error) {
+        console.error("Error requesting payment:", error);
+    }
+};
 
   
   if (!worker) {
@@ -329,7 +387,19 @@ export default function WorkerDashboard() {
             onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
           />
           <button onClick={sendMessage}>Send</button>
-          <button onClick={() => setShowRatePopup(true)}>Request Payment</button>
+          <button 
+            onClick={() => {
+              const currentBooking = acceptedBookings.find(b => b.user_id === chatUser);
+              if (!currentBooking) {
+                alert("No booking found for this chat.");
+                return;
+              }
+              openRatePopup(currentBooking.booking_id);
+            }}
+          >
+            Request Payment
+          </button>
+
         </div>
       </div>
     )}
