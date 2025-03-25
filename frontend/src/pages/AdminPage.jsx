@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import '../styles/admin.css';
+import axios from "axios"; // Import Axios
 
 // Define our own Button component
 const Button = ({ children, variant = "default", size = "default", className = "", ...props }) => {
@@ -298,6 +299,21 @@ export default function AdminDashboard() {
   const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState("");
   const [modalTitle, setModalTitle] = useState("");
+
+  
+  // Report Management Data
+  const chartData = [
+    { name: "Jan", users: 1, workers: 2, amt: 2400 },
+    { name: "Feb", users: 2, workers: 10, amt: 2210 },
+    { name: "Mar", users: 3, workers: 14, amt: 2290 },
+    { name: "Apr", users: 3, workers: 15, amt: 2000 },
+    { name: "May", users: 3, workers: 19, amt: 2181 },
+    { name: "Jun", users: 3, workers: 24, amt: 2500 },
+  ]
+
+
+  
+
   
   
   // Simulate loading time
@@ -308,240 +324,207 @@ export default function AdminDashboard() {
     return () => clearTimeout(timer);
   }, []);
 
-  // User Management Data
-  const users = [
-    { id: 1, name: "John Doe", email: "john@example.com", role: "Customer" },
-    { id: 2, name: "Jane Smith", email: "jane@example.com", role: "Customer" },
-    { id: 3, name: "Bob Johnson", email: "bob@example.com", role: "Customer" },
-  ]
-
-  // Worker Management Data
-  const workers = [
-    { id: 1, name: "Alice Brown", email: "alice@example.com", service: "Plumbing" },
-    { id: 2, name: "Charlie Davis", email: "charlie@example.com", service: "Electrical" },
-    { id: 3,  name: "Eva Green", email: "eva@example.com", service: "Cleaning" },
-  ]
-
-  // Dispute Resolution Data
-  const disputes = [
-    { id: 1, worker: "Alice Brown", customer: "John Doe", issue: "Incomplete work", status: "Open" },
-    { id: 2, worker: "Charlie Davis", customer: "Jane Smith", issue: "Delayed service", status: "In Progress" },
-    { id: 3, worker: "Eva Green", customer: "Bob Johnson", issue: "Poor quality", status: "Resolved" },
-  ]
-
-  // Report Management Data
-  const chartData = [
-    { name: "Jan", users: 400, workers: 240, amt: 2400 },
-    { name: "Feb", users: 300, workers: 139, amt: 2210 },
-    { name: "Mar", users: 200, workers: 980, amt: 2290 },
-    { name: "Apr", users: 278, workers: 390, amt: 2000 },
-    { name: "May", users: 189, workers: 480, amt: 2181 },
-    { name: "Jun", users: 239, workers: 380, amt: 2500 },
-  ]
-
-  // Service Management Data
-  const services = [
-    { id: 1, name: "Plumbing", workers: 15, status: "Active" },
-    { id: 2, name: "Electrical", workers: 12, status: "Active" },
-    { id: 3, name: "Cleaning", workers: 20, status: "Active" },
-    { id: 4, name: "Gardening", workers: 8, status: "Inactive" },
-  ]
-
-  // User Management Component
-  const UserManagement = () => (
-    <div>
-      <h2 className="section-title">User Management</h2>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {users.map((user) => (
-            <TableRow key={user.id}>
-              <TableCell>{user.name}</TableCell>
-              <TableCell>{user.email}</TableCell>
-              <TableCell>{user.role}</TableCell>
-              <TableCell>
-                <Button variant="outline" size="sm" className="action-button">
-                  Edit
-                </Button>
-                <Button variant="destructive" size="sm">
-                  Delete
-                </Button>
-              </TableCell>
+    
+  const WorkerManagement = () => {
+    const [workers, setWorkers] = useState([]);
+  
+    // Fetch workers from the backend
+    useEffect(() => {
+      axios.get("http://localhost:5000/all-workers") // Ensure this matches your backend route
+        .then(response => {
+          console.log("✅ Workers fetched:", response.data); // Debugging
+          setWorkers(response.data);
+        })
+        .catch(error => console.error("❌ Error fetching workers:", error.response?.data || error.message));
+    }, []);
+  
+    return (
+      <div>
+        <h2 className="section-title">Worker Management</h2>
+        <Button className="add-button">Add New Worker</Button>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Service</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  )
-
-  // Worker Management Component
-  const WorkerManagement = () => (
-    <div>
-      <h2 className="section-title">Worker Management</h2>
-      <Button className="add-button">Add New Worker</Button>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Service</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {workers.map((worker) => (
-            <TableRow key={worker.id}>
-              <TableCell>{worker.name}</TableCell>
-              <TableCell>{worker.email}</TableCell>
-              <TableCell>{worker.service}</TableCell>
-              <TableCell>
-                <Button variant="outline" size="sm" className="action-button">
-                  Edit
-                </Button>
-                <Button variant="destructive" size="sm">
-                  Remove
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  )
-
-  // Dispute Resolution Component
-  const DisputeResolution = () => (
-    <div>
-      <h2 className="section-title">Dispute Resolution</h2>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Worker</TableHead>
-            <TableHead>Customer</TableHead>
-            <TableHead>Issue</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {disputes.map((dispute) => (
-            <TableRow key={dispute.id}>
-              <TableCell>{dispute.worker}</TableCell>
-              <TableCell>{dispute.customer}</TableCell>
-              <TableCell>{dispute.issue}</TableCell>
-              <TableCell>
-                <Badge
-                  variant={
-                    dispute.status === "Open" ? "destructive" : dispute.status === "In Progress" ? "warning" : "success"
-                  }
-                >
-                  {dispute.status}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <Button variant="outline" size="sm">
-                  Resolve
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  )
-
-  // Report Management Component
-  const ReportManagement = () => (
-    <div>
-      <h2 className="section-title">Reports</h2>
-      <div className="stats-grid">
-        <Card>
-          <CardHeader>
-            <CardTitle>Total Users</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="stat-value">1,234</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Total Workers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="stat-value">567</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Completed Jobs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="stat-value">890</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Active Disputes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="stat-value">12</p>
-          </CardContent>
-        </Card>
+          </TableHeader>
+          <TableBody>
+            {workers.length > 0 ? (
+              workers.map((worker) => (
+                <TableRow key={worker.id}>
+                  <TableCell>{worker.name}</TableCell>
+                  <TableCell>{worker.email}</TableCell>
+                  <TableCell>{worker.service_name || "N/A"}</TableCell>
+                  <TableCell>
+                    <Button variant="outline" size="sm" className="action-button">
+                      Edit
+                    </Button>
+                    <Button variant="destructive" size="sm">
+                      Remove
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan="4" className="text-center">No workers found</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
+    );
+  };
+//fetch users
+
+const UserManagement = () => {
+    const [users, setUsers] = useState([]);
+  
+    useEffect(() => {
+      axios.get("http://localhost:5000/users") // Adjust the endpoint as per server.js
+        .then(response => {
+          setUsers(response.data);
+        })
+        .catch(error => {
+          console.error("Error fetching users:", error);
+        });
+    }, []);
+  
+    return (
+      <div>
+        <h2 className="section-title">User Management</h2>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {users.map((user) => (
+              <TableRow key={user.id}>
+                <TableCell>{user.username}</TableCell>
+                <TableCell>{user.email}</TableCell>
+                <TableCell>{user.role || "User"}</TableCell>
+                <TableCell>
+                  <Button variant="outline" size="sm" className="action-button">Edit</Button>
+                  <Button variant="destructive" size="sm">Delete</Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
+  
+
+  
+
+  
+  // Report
+
+
+// Report Management Component
+const ReportManagement = () => (
+  <div>
+    <h2 className="section-title">Reports</h2>
+    <div className="stats-grid">
       <Card>
         <CardHeader>
-          <CardTitle>User and Worker Growth</CardTitle>
+          <CardTitle>Total Users</CardTitle>
         </CardHeader>
         <CardContent>
-          <BarChart data={chartData} />
+          <p className="stat-value">3</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Total Workers</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="stat-value">24</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Completed Jobs</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="stat-value">5</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Active Disputes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="stat-value">2</p>
         </CardContent>
       </Card>
     </div>
-  )
+    <Card>
+      <CardHeader>
+        <CardTitle>User and Worker Growth</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <BarChart data={chartData} />
+      </CardContent>
+    </Card>
+  </div>
+)
 
   // Service Management Component
-  const ServiceManagement = () => (
-    <div>
-      <h2 className="section-title">Service Management</h2>
-      <Button className="add-button">Add New Service</Button>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Service Name</TableHead>
-            <TableHead>Number of Workers</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {services.map((service) => (
-            <TableRow key={service.id}>
-              <TableCell>{service.name}</TableCell>
-              <TableCell>{service.workers}</TableCell>
-              <TableCell>
-                <Badge variant={service.status === "Active" ? "success" : "secondary"}>{service.status}</Badge>
-              </TableCell>
-              <TableCell>
-                <Button variant="outline" size="sm" className="action-button">
-                  Edit
-                </Button>
-                <Button variant={service.status === "Active" ? "destructive" : "default"} size="sm">
-                  {service.status === "Active" ? "Deactivate" : "Activate"}
-                </Button>
-              </TableCell>
+  const ServiceManagement = () => {
+    const [services, setServices] = useState([]);
+  
+    useEffect(() => {
+      axios.get("http://localhost:5000/services")
+        .then(response => {
+          console.log("✅ Services fetched:", response.data); // Debugging
+          setServices(response.data);
+        })
+        .catch(error => console.error("❌ Error fetching services:", error.response?.data || error.message));
+    }, []);
+  
+    return (
+      <div>
+        <h2 className="section-title">Service Management</h2>
+        <Button className="add-button">Add New Service</Button>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Service Name</TableHead>
+              <TableHead>Description</TableHead>
+            
+              <TableHead>Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  )
+          </TableHeader>
+          <TableBody>
+            {services.map((service) => (
+              <TableRow key={service.id}>
+                <TableCell>{service.name}</TableCell>
+                <TableCell>{service.description}</TableCell>
+                <TableCell>
+                  <Button variant="outline" size="sm" className="action-button">
+                    Edit
+                  </Button>
+                  <Button variant="destructive" size="sm">
+                    Remove
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
 
   const renderContent = () => {
     switch(activeTab) {
@@ -549,8 +532,6 @@ export default function AdminDashboard() {
         return <UserManagement />;
       case "workers":
         return <WorkerManagement />;
-      case "disputes":
-        return <DisputeResolution />;
       case "reports":
         return <ReportManagement />;
       case "services":
@@ -581,13 +562,6 @@ export default function AdminDashboard() {
           >
             <Icons.Briefcase className="nav-icon1" />
             <span className="nav-text1">Workers</span>
-          </button>
-          <button
-            className={`nav-item1 ${activeTab === "disputes" ? "active" : ""}`}
-            onClick={() => setActiveTab("disputes")}
-          >
-            <Icons.AlertTriangle className="nav-icon1" />
-            <span className="nav-text1">Disputes</span>
           </button>
           <button
             className={`nav-item1 ${activeTab === "reports" ? "active" : ""}`}
@@ -639,6 +613,7 @@ export default function AdminDashboard() {
         </Modal>
       )}
     </div>
+
   )
-}
+};
 

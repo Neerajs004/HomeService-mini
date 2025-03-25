@@ -158,6 +158,30 @@ app.post("/login", (req, res) => {
    });
 });
 
+//fetching users
+app.get("/users", (req, res) => {
+  const sql = "SELECT id, username, email FROM user";
+  db.query(sql, (err, results) => {
+    if (err) return res.status(500).json({ error: "Database error", details: err.message });
+    res.json(results);
+  });
+});
+//fetch all workers
+app.get("/all-workers", (req, res) => {
+  const sql = `
+    SELECT w.id, w.name, w.email, s.name AS service_name 
+    FROM workers w
+    LEFT JOIN services s ON w.service_id = s.id`; // Ensure workers are linked to services
+
+  db.query(sql, (err, results) => {
+    if (err) return res.status(500).json({ error: "Database error", details: err.message });
+    
+    
+    res.json(results);
+  });
+});
+
+
 //fetching username
 app.get("/user", (req, res) => {
   const { userId } = req.query;
@@ -184,8 +208,17 @@ app.get("/services", (req, res) => {
 // **2. Get Workers Sorted by Location & Rating**
 app.get("/workers", (req, res) => {
   const { serviceId, userId } = req.query;
-  if (!serviceId || !userId) return res.status(400).json({ error: "Missing parameters" });
 
+  // If no parameters, return all workers
+  if (!serviceId || !userId) {
+    const sql = "SELECT id, name, email, service_id FROM workers";
+    return db.query(sql, (err, results) => {
+      if (err) return res.status(500).json({ error: "Database error", details: err.message });
+      return res.json(results);
+    });
+  }
+
+  // Otherwise, return filtered workers
   const sql = `
     SELECT w.*, 
       (6371 * ACOS(COS(RADIANS(u.latitude)) * COS(RADIANS(w.latitude)) * 
@@ -198,6 +231,28 @@ app.get("/workers", (req, res) => {
 
   db.query(sql, [userId, serviceId], (err, results) => {
     if (err) return res.status(500).json({ error: "Database error" });
+    res.json(results);
+  });
+});
+
+//get services
+app.get("/services", (req, res) => {
+  const sql = "SELECT id, name, description, image FROM services"; // Ensure 'image' column contains Cloudinary URLs
+  db.query(sql, (err, results) => {
+    if (err) return res.status(500).json({ error: "Database error" });
+
+    res.json(results); // Directly return the data since images are URLs
+  });
+});
+
+
+//get report
+app.get("/admin-reports", (req, res) => {
+  const sql = "SELECT * FROM reports ORDER BY year DESC, month DESC LIMIT 12";
+
+  db.query(sql, (err, results) => {
+    if (err) return res.status(500).json({ error: "Database error", details: err.message });
+
     res.json(results);
   });
 });
