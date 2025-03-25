@@ -447,17 +447,20 @@ io.on("connection", (socket) => {
     onlineUsers.set(userId, socket.id);
   });
 
-  socket.on("sendMessage", ({ senderId, receiverId, message }) => {
-    const sql = "INSERT INTO messages (sender_id, receiver_id, message) VALUES (?, ?, ?)";
-    db.query(sql, [senderId, receiverId, message], (err) => {
+  socket.on("sendMessage", ({ senderId, receiverId, message, senderType }) => {
+    const sql = "INSERT INTO messages (sender_id, receiver_id, message, sender_type, timestamp) VALUES (?, ?, ?, ?, NOW())";
+    
+    db.query(sql, [senderId, receiverId, message, senderType], (err) => {
       if (err) return console.error("Message saving failed:", err);
-
+  
       const receiverSocket = onlineUsers.get(receiverId);
       if (receiverSocket) {
-        io.to(receiverSocket).emit("receiveMessage", { senderId, message });
+        io.to(receiverSocket).emit("receiveMessage", { senderId, message, senderType });
       }
     });
   });
+  
+
 
   socket.on("disconnect", () => {
     onlineUsers.forEach((value, key) => {
@@ -474,7 +477,7 @@ app.get("/messages", (req, res) => {
   const { senderId, receiverId } = req.query;
 
   const sql = `
-    SELECT sender_id, receiver_id, message, timestamp 
+    SELECT sender_id, receiver_id, message, timestamp, sender_type 
     FROM messages 
     WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
     ORDER BY timestamp ASC
@@ -485,6 +488,41 @@ app.get("/messages", (req, res) => {
     res.json(results);
   });
 });
+
+app.post("/updateBookingExpenses", (req, res) => {
+  const { bookingId, workerFee, additionalExpenses } = req.body;
+
+  if (!bookingId || workerFee === undefined || additionalExpenses === undefined) {
+    return res.status(400).json({ error: "All fields are required" });
+  }
+
+  const totalAmount = parseFloat(workerFee) + parseFloat(additionalExpenses); // Calculate total
+
+  const sql = "UPDATE bookings SET worker_fee = ?, additional_expenses = ?, amount = ? WHERE id = ?";
+
+  db.query(sql, [workerFee, additionalExpenses, totalAmount, bookingId], (err, result) => {
+    if (err) return res.status(500).json({ error: "Database error" });
+
+    res.json({ success: true, message: "Booking updated with total amount", totalAmount });
+  });
+});
+
+
+app.get("/getLatestBookingId", (req, res) => {
+  const { userId } = req.query;
+  if (!userId) return res.status(400).json({ error: "User ID is required" });
+
+  const sql = "SELECT id FROM bookings WHERE user_id = ? ORDER BY created_at DESC LIMIT 1";
+  
+  db.query(sql, [userId], (err, results) => {
+    if (err) return res.status(500).json({ error: "Database error" });
+    
+    if (results.length === 0) return res.status(404).json({ error: "No booking found" });
+
+    res.json({ success: true, bookingId: results[0].id });
+  });
+});
+
 
 
 

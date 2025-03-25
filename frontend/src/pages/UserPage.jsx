@@ -212,10 +212,7 @@ const fetchMessages = async (receiverId) => {
   const data = await res.json();
   setMessages(data);
 };
- // Handle payment
- const handlePayment = (amount) => {
-  alert(`Paying ₹{amount}...`); // Simulate payment
-};
+
 
 // Render message content with Pay Now button if it's a payment message
 const renderMessageContent = (message) => {
@@ -224,9 +221,11 @@ const renderMessageContent = (message) => {
     return (
       <div>
         <div>{message}</div>
-        <button className="pay-button" onClick={() => handlePayment(amount)}>
-          Pay Now
-        </button>
+          
+  <button className="pay-now-btn" onClick={handlePayNow}>
+    Pay Now
+  </button>
+  
       </div>
     );
   }
@@ -236,12 +235,33 @@ const renderMessageContent = (message) => {
 const sendMessage = () => {
   if (!newMessage.trim()) return;
   
-  socket.emit("sendMessage", { senderId: userId, receiverId: chatUser, message: newMessage });
-  setMessages([...messages, { sender_id: userId, message: newMessage }]);
+  socket.emit("sendMessage", { senderId: userId, receiverId: chatUser, message: newMessage, senderType: 'u' });
+
+  // ✅ Include sender_type for correct alignment
+  setMessages([...messages, { sender_id: userId, message: newMessage, sender_type: 'u' }]);
   setNewMessage("");
 };
 
 
+
+  const handlePayNow = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/getLatestBookingId?userId=${userId}`);
+      const data = await response.json();
+  
+      if (data.success) {
+        console.log("Navigating to:", `/payment/${data.bookingId}`);
+        navigate(`/payment/${data.bookingId}`);
+      } else {
+        alert("No booking found for payment!");
+      }
+    } catch (error) {
+      console.error("Error fetching booking ID:", error);
+      alert("Failed to fetch booking ID.");
+    }
+  };
+
+  
 
   return (
     <div className="user-"> 
@@ -408,29 +428,30 @@ const sendMessage = () => {
         </div>
         
         <div className="messages-container">
-          {messages.length > 0 ? (
-            messages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`message ${msg.sender_id === userId ? 'outgoing-message' : 'incoming-message'}`}
-              >
-                <div className="sender-label">
-                  {msg.sender_id === userId ? 'You' : pendingBookings.find(b => b.worker_id === chatUser)?.worker_name || 'Worker'}
-                </div>
-                <div className="message-content">{renderMessageContent(msg.message)}</div>
-                <div className="message-time">
-                  {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="empty-state">
-              <div className="empty-state-icon">💬</div>
-              <p className="empty-state-text">No messages yet. Say hello!</p>
-            </div>
-          )}
-          <div id="messagesEnd" />
+  {messages.length > 0 ? (
+    messages.map((msg, idx) => {
+      const isUser = msg.sender_type === 'u'; // Check sender_type from DB
+      
+      return (
+        <div key={idx} className={`message ${isUser ? 'incoming-message' : 'outgoing-message'}`}>
+          <div className="sender-label">
+            {isUser ? 'You' : pendingBookings.find(b => b.worker_id === chatUser)?.worker_name || 'Worker'}
+          </div>
+          <div className="message-content">{msg.message}</div>
+          <div className="message-time">
+            {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+          </div>
         </div>
+      );
+    })
+  ) : (
+    <div className="empty-state">
+      <div className="empty-state-icon">💬</div>
+      <p className="empty-state-text">No messages yet. Say hello!</p>
+    </div>
+  )}
+</div>
+
         
         <div className="message-input">
           <input

@@ -2194,3 +2194,20 @@ body {
   }
 }
 }
+
+.incoming-message, .incoming-messageworker {
+  text-align: left;
+  background-color: #e0e0e0;
+  padding: 8px;
+  border-radius: 8px;
+  max-width: 70%;
+}
+
+.outgoing-message, .outgoing-messageworker {
+  text-align: right;
+  background-color: #007bff;
+  color: white;
+  padding: 8px;
+  border-radius: 8px;
+  max-width: 70%;
+}

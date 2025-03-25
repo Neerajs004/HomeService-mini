@@ -97,26 +97,50 @@ export default function WorkerDashboard() {
   const sendMessage = () => {
     if (!newMessage.trim()) return;
     
-    socket.emit("sendMessage", { senderId: workerId, receiverId: chatUser, message: newMessage });
-    setMessages([...messages, { sender_id: workerId, message: newMessage }]);
+    socket.emit("sendMessage", { senderId: workerId, receiverId: chatUser, message: newMessage, senderType: 'w' });
+  
+    // ✅ Include sender_type for correct alignment
+    setMessages([...messages, { sender_id: workerId, message: newMessage, sender_type: 'w' }]);
     setNewMessage("");
   };
+  
+
+  
   // Handle rate submission
-  const handleRateSubmit = () => {
+  const handleRateSubmit = async () => {
     if (rate <= 0) {
       alert("Please enter a valid rate.");
       return;
     }
-
+  
     const totalAmount = rate + additionalExpense;
-    const message = `Please pay ₹${totalAmount} for the work done. Rate: ₹${rate}, Additional Expense: ₹${additionalExpense}.`;
-
-    socket.emit("sendMessage", { senderId: workerId, receiverId: chatUser, message });
-    setMessages([...messages, { sender_id: workerId, message }]);
-    setShowRatePopup(false);
-    setRate(0);
-    setAdditionalExpense(0);
+  
+    try {
+      const response = await fetch("http://localhost:5000/updateBookingExpenses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId: selectedBookingId, // Make sure bookingId is set correctly
+          workerFee: rate,
+          additionalExpenses: additionalExpense
+        }),
+      });
+  
+      const data = await response.json();
+      if (data.success) {
+        alert(`Payment details updated! Total Amount: ₹${data.totalAmount}`);
+        setShowRatePopup(false);
+        setRate(0);
+        setAdditionalExpense(0);
+      } else {
+        alert("Failed to update payment details.");
+      }
+    } catch (error) {
+      console.error("Error updating booking fee:", error);
+    }
   };
+  
+  
 
   
   if (!worker) {
@@ -253,27 +277,26 @@ export default function WorkerDashboard() {
     {chatUser && (
       <div className="chat-windowworker">
         <h3>Chat with {acceptedBookings.find(booking => booking.user_id === chatUser)?.username || `User ${chatUser}`}</h3>
-        <div className="messages-containerworker">
+                <div className="messages-containerworker">
           {messages.map((msg, idx) => {
-            const isWorker = msg.sender_id === workerId;
+            const isWorker = msg.sender_type === 'w'; // Check sender_type from DB
+
             return (
-              <div 
-                key={idx} 
-                className={isWorker ? "outgoing-messageworker" : "incoming-messageworker"}
-              >
+              <div key={idx} className={isWorker ? "incoming-messageworker" : "outgoing-messageworker"}>
                 <span className={`message-labelworker ${isWorker ? 'worker-labelworker' : 'user-labelworker'}`}>
                   {isWorker ? worker.name : acceptedBookings.find(booking => booking.user_id === chatUser)?.username || `User ${chatUser}`}
                 </span>
-                {msg.message}
-                {msg.timestamp && (
-                  <div className="message-timeworker">
-                    {new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                  </div>
-                )}
+                <div className="message-contentworker">{msg.message}</div>
+                <div className="message-timeworker">
+                  {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                </div>
               </div>
             );
           })}
         </div>
+
+
+        
         <div className="message-inputworker">
           <input 
             value={newMessage} 
